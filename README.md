@@ -25,7 +25,7 @@ This is useful when you want to know why this line was changed.
 
 ## Commands
 
-### `git-messenger2:popup-message`
+### `git-messenger2-popup-message`
 
 Pop up last commit message at current line. Show detail message, Commit ID, Author,
 Date and commit message with `C-u` prefix
@@ -49,31 +49,31 @@ You can modify key bindings by customizing `git-messenger2-map`.
 
 ## Customize
 
-### `git-messenger2:show-detail`(Default `nil`)
+### `git-messenger2-show-detail`(Default `nil`)
 
 Always show detail message if this value is `t`.
 
-### `git-messenger2:handled-backends`(Default `'(git svn)`)
+### `git-messenger2-handled-backends`(Default `'(git svn)`)
 
 Handled VCS which `git-messenger` uses.
 Entries in this list will be tried in order to determine whether a
 file is under that sort of version control.
 
-### `git-messenger2:use-magit-popup`(Default `nil`)
+### `git-messenger2-use-magit-popup`(Default `nil`)
 
 Use `magit-show-commit` for showing status/diff commands
 
 ## Hooks
 
-### `git-messenger2:before-popup-hook`
+### `git-messenger2-before-popup-hook`
 
 Run before popup commit message. Hook function take one argument, commit message.
 
-### `git-messenger2:after-popup-hook`
+### `git-messenger2-after-popup-hook`
 
 Run after popup commit message. Hook function take one argument, commit message.
 
-### `git-messenger2:popup-buffer-hook`
+### `git-messenger2-popup-buffer-hook`
 
 Run after popup buffer.
 
@@ -82,11 +82,11 @@ Run after popup buffer.
 
 You may be able to use these variables useful in commands of `git-messenger2-map`.
 
-#### `git-messenger2:last-message`
+#### `git-messenger2-last-message`
 
 Last popup-ed commit message
 
-#### `git-messenger2:last-commit-id`
+#### `git-messenger2-last-commit-id`
 
 Last popup-ed commit ID
 
@@ -94,12 +94,12 @@ Last popup-ed commit ID
 ## Sample Configuration
 
 ```lisp
-(require 'git-messenger) ;; You need not to load if you install with package.el
-(global-set-key (kbd "C-x v p") 'git-messenger2:popup-message)
+(require 'git-messenger2) ;; You need not to load if you install with package.el
+(global-set-key (kbd "C-x v p") 'git-messenger2-popup-message)
 
-(define-key git-messenger2-map (kbd "m") 'git-messenger2:copy-message)
+(define-key git-messenger2-map (kbd "m") 'git-messenger2-copy-message)
 
 ;; Use magit-show-commit for showing status/diff commands
 (custom-set-variables
- '(git-messenger2:use-magit-popup t))
+ '(git-messenger2-use-magit-popup t))
 ```
