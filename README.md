@@ -59,10 +59,6 @@ Handled VCS which `git-messenger` uses.
 Entries in this list will be tried in order to determine whether a
 file is under that sort of version control.
 
-### `git-messenger2-use-magit-popup`(Default `nil`)
-
-Use `magit-show-commit` for showing status/diff commands
-
 ## Hooks
 
 ### `git-messenger2-before-popup-hook`
@@ -98,8 +94,4 @@ Last popup-ed commit ID
 (global-set-key (kbd "C-x v p") 'git-messenger2-popup-message)
 
 (define-key git-messenger2-map (kbd "m") 'git-messenger2-copy-message)
-
-;; Use magit-show-commit for showing status/diff commands
-(custom-set-variables
- '(git-messenger2-use-magit-popup t))
 ```

@@ -36,8 +36,6 @@
 (require 'cl-lib)
 (require 'popup)
 
-(declare-function magit-show-commit "magit-diff")
-
 (defgroup git-messenger2 nil
   "git messenger"
   :group 'vc)
@@ -63,10 +61,6 @@
 Entries in this list will be tried in order to determine whether a
 file is under that sort of version control."
   :type '(repeat symbol))
-
-(defcustom git-messenger2-use-magit-popup nil
-  "Use magit-show-commit instead pop-to-buffer"
-  :type 'boolean)
 
 (defvar git-messenger2-last-message nil
   "Last message displayed by git-messenger.
@@ -255,11 +249,9 @@ and menus.")
     (erase-buffer)
     (unless (zerop (git-messenger2--execute-command vcs args t))
       (error "Failed: '%s(args=%s)'" (git-messenger2--vcs-command vcs) args))
-    (if git-messenger2-use-magit-popup
-        (magit-show-commit git-messenger2-last-commit-id)
-      (pop-to-buffer (current-buffer))
-      (when mode
-        (funcall mode)))
+    (pop-to-buffer (current-buffer))
+    (when mode
+      (funcall mode))
     (run-hooks 'git-messenger2-popup-buffer-hook)
     (view-mode +1)
     (goto-char (point-min)))
@@ -352,10 +344,7 @@ and menus.")
                (let* ((func (car fp))
                       (desc (cdr fp))
                       (key (git-messenger2-function-to-key func)))
-                 (when (and git-messenger2-use-magit-popup (eq func 'git-messenger2--popup-show))
-                   (setq desc "magit-show-commit"))
-                 (unless (and git-messenger2-use-magit-popup
-                              (memq func '(git-messenger2--popup-show-verbose git-messenger2--popup-diff)))
+                 (unless(memq func '(git-messenger2--popup-show-verbose git-messenger2--popup-diff))
                    (format "[%s]%s " key desc))))
              git-messenger2-func-prompt ""))
 
