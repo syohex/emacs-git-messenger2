@@ -1,8 +1,8 @@
 ;;; test.el --- test of git-messenger
 
-;; Copyright (C) 2016 by Syohei YOSHIDA
+;; Copyright (C) 2020 by Shohei YOSHIDA
 
-;; Author: Syohei YOSHIDA <syohex@gmail.com>
+;; Author: Shohei YOSHIDA <syohex@gmail.com>
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,12 +20,12 @@
 ;;; Code:
 
 (require 'ert)
-(require 'git-messenger)
+(require 'git-messenger2)
 
 (ert-deftest find-vcs ()
   ""
   (let* ((tmp-dir (file-name-as-directory
-                   (concat default-directory (make-temp-name "git-messenger"))))
+                   (concat default-directory (make-temp-name "git-messenger2"))))
          (git-dir (concat tmp-dir ".git"))
          (hg-dir (concat tmp-dir "foo/" ".hg"))
          (test-dir (concat tmp-dir "foo/bar/")))
@@ -35,7 +35,7 @@
           (make-directory hg-dir t)
           (make-directory test-dir t)
           (let ((default-directory test-dir))
-            (should (eq (git-messenger:find-vcs) 'hg))))
+            (should (eq (git-messenger2:find-vcs) 'hg))))
       (delete-directory tmp-dir t))))
 
 ;;; test.el ends here
