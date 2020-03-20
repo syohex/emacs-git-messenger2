@@ -16,13 +16,6 @@ This is useful when you want to know why this line was changed.
 * [popup](https://github.com/auto-complete/popup-el)
 
 
-## Supported VCS
-
-- Git
-- Subversion
-- Mercurial
-
-
 ## Commands
 
 ### `git-messenger2-popup-message`
@@ -52,12 +45,6 @@ You can modify key bindings by customizing `git-messenger2-map`.
 ### `git-messenger2-show-detail`(Default `nil`)
 
 Always show detail message if this value is `t`.
-
-### `git-messenger2-handled-backends`(Default `'(git svn)`)
-
-Handled VCS which `git-messenger` uses.
-Entries in this list will be tried in order to determine whether a
-file is under that sort of version control.
 
 ## Hooks
 

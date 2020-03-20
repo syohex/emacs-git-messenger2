@@ -56,7 +56,7 @@
   "Hook run after popup buffer(popup diff, popup show etc)"
   :type 'hook)
 
-(defcustom git-messenger2-handled-backends '(git svn hg)
+(defcustom git-messenger2-handled-backends '(git)
   "List of version control backends for which `git-messenger' will be used.
 Entries in this list will be tried in order to determine whether a
 file is under that sort of version control."
@@ -78,7 +78,6 @@ and menus.")
 
 (defconst git-messenger2-directory-of-vcs
   '((git . ".git")
-    (svn . ".svn")
     (hg . ".hg")))
 
 (defun git-messenger2--blame-arguments (vcs file line)
@@ -87,7 +86,6 @@ and menus.")
       (git (list "--no-pager" "blame" "-w" "-L"
                  (format "%d,+1" line)
                  "--porcelain" basename))
-      (svn (list "blame" basename))
       (hg (list "blame" "-wuc" basename)))))
 
 (defsubst git-messenger2--cat-file-arguments (commit-id)
@@ -96,15 +94,11 @@ and menus.")
 (defsubst git-messenger2--vcs-command (vcs)
   (cl-case vcs
     (git "git")
-    (svn "svn")
     (hg "hg")))
 
 (defun git-messenger2--execute-command (vcs args output)
   (cl-case vcs
     (git (apply 'process-file "git" nil output nil args))
-    (svn
-     (let ((process-environment (cons "LANG=C" process-environment)))
-       (apply 'process-file "svn" nil output nil args)))
     (hg
      (let ((process-environment (cons
                                  "HGPLAIN=1"
@@ -126,12 +120,6 @@ and menus.")
       (cons (match-string-no-properties 2) (match-string-no-properties 1))
     (cons "-" "-")))
 
-(defun git-messenger2--svn-commit-info-at-line (line)
-  (forward-line (1- line))
-  (if (looking-at "^\\s-*\\([0-9]+\\)\\s-+\\(\\S-+\\)")
-      (cons (match-string-no-properties 1) (match-string-no-properties 2))
-    (cons "-" "-")))
-
 (defun git-messenger2--commit-info-at-line (vcs file line)
   (with-temp-buffer
     (let ((args (git-messenger2--blame-arguments vcs file line)))
@@ -140,7 +128,6 @@ and menus.")
       (goto-char (point-min))
       (cl-case vcs
         (git (git-messenger2--git-commit-info-at-line))
-        (svn (git-messenger2--svn-commit-info-at-line line))
         (hg (git-messenger2--hg-commit-info-at-line line))))))
 
 (defsubst git-messenger2--not-committed-id-p (commit-id)
@@ -160,23 +147,12 @@ and menus.")
       (error "Failed: 'hg log"))
     (buffer-substring-no-properties (point-min) (point-max))))
 
-(defun git-messenger2--svn-commit-message (commit-id)
-  (let ((args (list "log" "-c" commit-id)))
-    (unless (zerop (git-messenger2--execute-command 'svn args t))
-      (error "Failed: 'svn log"))
-    (let (end)
-      (goto-char (point-max))
-      (when (re-search-backward "^-\\{25\\}" nil t)
-        (setq end (point)))
-      (buffer-substring-no-properties (point-min) (or end (point-max))))))
-
 (defun git-messenger2--commit-message (vcs commit-id)
   (with-temp-buffer
     (if (git-messenger2--not-committed-id-p commit-id)
         "* not yet committed *"
       (cl-case vcs
         (git (git-messenger2--git-commit-message commit-id))
-        (svn (git-messenger2--svn-commit-message commit-id))
         (hg (git-messenger2--hg-commit-message commit-id))))))
 
 (defun git-messenger2--commit-date (commit-id)
@@ -204,21 +180,7 @@ and menus.")
                    (substring commit-id 0 8) author date message)))
     (hg (let ((date (git-messenger2--hg-commit-date commit-id)))
           (format "commit : %s \nAuthor : %s\nDate   : %s \n%s"
-                  commit-id author date message)))
-    (svn (with-temp-buffer
-           (insert message)
-           (goto-char (point-min))
-           (forward-line 1)
-           (let ((line (buffer-substring-no-properties (point) (line-end-position)))
-                 (re "^\\s-*\\(?:r[0-9]+\\)\\s-+|\\s-+\\([^|]+\\)|\\s-+\\([^|]+\\)"))
-             (unless (string-match re line)
-               (error "Can't get revision %s" line))
-             (let ((author (match-string-no-properties 1 line))
-                   (date (match-string-no-properties 2 line)))
-               (forward-paragraph)
-               (format "commit : r%s \nAuthor : %s\nDate  : %s\n%s"
-                       commit-id author date
-                       (buffer-substring-no-properties (point) (point-max)))))))))
+                  commit-id author date message)))))
 
 (defun git-messenger2--show-detail-p (commit-id)
   (and (or git-messenger2-show-detail current-prefix-arg)
@@ -257,10 +219,6 @@ and menus.")
     (goto-char (point-min)))
   (git-messenger2--popup-close))
 
-(defun git-messenger2--popup-svn-show ()
-  (git-messenger2--popup-common
-   'svn (list "diff" "-c" git-messenger2-last-commit-id) 'diff-mode))
-
 (defun git-messenger2--popup-hg-show ()
   (git-messenger2--popup-common
    'hg (list "diff" "-c" git-messenger2-last-commit-id) 'diff-mode))
@@ -271,7 +229,6 @@ and menus.")
     (git (let ((args (list "--no-pager" "diff" "--no-ext-diff"
                            (concat git-messenger2-last-commit-id "^!"))))
            (git-messenger2--popup-common 'git args 'diff-mode)))
-    (svn (git-messenger2--popup-svn-show))
     (hg (git-messenger2--popup-hg-show))))
 
 (defun git-messenger2--popup-show ()
@@ -280,7 +237,6 @@ and menus.")
     (git (let ((args (list "--no-pager" "show" "--no-ext-diff" "--stat"
                            git-messenger2-last-commit-id)))
            (git-messenger2--popup-common 'git args)))
-    (svn (git-messenger2--popup-svn-show))
     (hg (let ((args (list "log" "--stat" "-r"
                           git-messenger2-last-commit-id)))
           (git-messenger2--popup-common 'hg args)))))
@@ -291,7 +247,6 @@ and menus.")
     (git (let ((args (list "--no-pager" "show" "--no-ext-diff" "--stat" "-p"
                            git-messenger2-last-commit-id)))
            (git-messenger2--popup-common 'git args)))
-    (svn (error "'svn' does not support `popup-show-verbose'"))
     (hg (let ((args (list "log" "-p" "--stat" "-r"
                           git-messenger2-last-commit-id)))
           (git-messenger2--popup-common 'hg args)))))
@@ -318,13 +273,6 @@ and menus.")
         (when (and vcs-root (> (length vcs-root) longest))
           (setq longest (length vcs-root)
                 result vcs))))))
-
-(defun git-messenger2-svn-message (msg)
-  (with-temp-buffer
-    (insert msg)
-    (goto-char (point-min))
-    (forward-paragraph)
-    (buffer-substring-no-properties (point) (point-max))))
 
 (defvar git-messenger2-func-prompt
   '((git-messenger2--popup-show . "Show")
@@ -378,11 +326,7 @@ and menus.")
          (popuped-message (if (git-messenger2--show-detail-p commit-id)
                               (git-messenger2--format-detail vcs commit-id author msg)
                             (cl-case vcs
-                              (git msg)
-                              (svn (if (string= commit-id "-")
-                                       msg
-                                     (git-messenger2-svn-message msg)))
-                              (hg msg)))))
+                              (git msg)))))
     (setq git-messenger2-vcs vcs
           git-messenger2-last-message popuped-message
           git-messenger2-last-commit-id commit-id)
