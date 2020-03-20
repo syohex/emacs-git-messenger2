@@ -231,7 +231,8 @@ and menus.")
   (with-temp-buffer
     (insert msg)
     (goto-char (point-min))
-    (when (search-forward "-----BEGIN PGP SIGNATURE-----" nil t)
+    (if (not (search-forward "-----BEGIN PGP SIGNATURE-----" nil t))
+        msg
       (let ((start (line-beginning-position)))
         (when (search-forward "-----END PGP SIGNATURE-----" nil t)
           (delete-region start (point)))
