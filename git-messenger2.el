@@ -77,33 +77,25 @@ and menus.")
 (defvar git-messenger2-vcs nil)
 
 (defconst git-messenger2-directory-of-vcs
-  '((git . ".git")
-    (hg . ".hg")))
+  '((git . ".git")))
 
 (defun git-messenger2--blame-arguments (vcs file line)
   (let ((basename (file-name-nondirectory file)))
     (cl-case vcs
       (git (list "--no-pager" "blame" "-w" "-L"
                  (format "%d,+1" line)
-                 "--porcelain" basename))
-      (hg (list "blame" "-wuc" basename)))))
+                 "--porcelain" basename)))))
 
 (defsubst git-messenger2--cat-file-arguments (commit-id)
   (list "--no-pager" "cat-file" "commit" commit-id))
 
 (defsubst git-messenger2--vcs-command (vcs)
   (cl-case vcs
-    (git "git")
-    (hg "hg")))
+    (git "git")))
 
 (defun git-messenger2--execute-command (vcs args output)
   (cl-case vcs
-    (git (apply 'process-file "git" nil output nil args))
-    (hg
-     (let ((process-environment (cons
-                                 "HGPLAIN=1"
-                                 (cons "LANG=utf-8" process-environment))))
-       (apply 'process-file "hg" nil output nil args)))))
+    (git (apply 'process-file "git" nil output nil args))))
 
 (defun git-messenger2--git-commit-info-at-line ()
   (let* ((id-line (buffer-substring-no-properties
@@ -114,12 +106,6 @@ and menus.")
                    "unknown")))
     (cons commit-id author)))
 
-(defun git-messenger2--hg-commit-info-at-line (line)
-  (forward-line (1- line))
-  (if (looking-at "^\\s-*\\(\\S-+\\)\\s-+\\([a-z0-9]+\\)")
-      (cons (match-string-no-properties 2) (match-string-no-properties 1))
-    (cons "-" "-")))
-
 (defun git-messenger2--commit-info-at-line (vcs file line)
   (with-temp-buffer
     (let ((args (git-messenger2--blame-arguments vcs file line)))
@@ -127,8 +113,7 @@ and menus.")
         (error "Failed: '%s blame'" (git-messenger2--vcs-command vcs)))
       (goto-char (point-min))
       (cl-case vcs
-        (git (git-messenger2--git-commit-info-at-line))
-        (hg (git-messenger2--hg-commit-info-at-line line))))))
+        (git (git-messenger2--git-commit-info-at-line))))))
 
 (defsubst git-messenger2--not-committed-id-p (commit-id)
   (or (string-match-p "\\`\\(?:0+\\|-\\)\\'" commit-id)))
@@ -141,19 +126,12 @@ and menus.")
     (forward-paragraph)
     (buffer-substring-no-properties (point) (point-max))))
 
-(defun git-messenger2--hg-commit-message (commit-id)
-  (let ((args (list "log" "-T" "{desc}" "-r" commit-id)))
-    (unless (zerop (git-messenger2--execute-command 'hg args t))
-      (error "Failed: 'hg log"))
-    (buffer-substring-no-properties (point-min) (point-max))))
-
 (defun git-messenger2--commit-message (vcs commit-id)
   (with-temp-buffer
     (if (git-messenger2--not-committed-id-p commit-id)
         "* not yet committed *"
       (cl-case vcs
-        (git (git-messenger2--git-commit-message commit-id))
-        (hg (git-messenger2--hg-commit-message commit-id))))))
+        (git (git-messenger2--git-commit-message commit-id))))))
 
 (defun git-messenger2--commit-date (commit-id)
   (let ((args (list "--no-pager" "show" "--pretty=%ad" commit-id)))
@@ -164,23 +142,11 @@ and menus.")
       (buffer-substring-no-properties
        (line-beginning-position) (line-end-position)))))
 
-(defun git-messenger2--hg-commit-date (commit-id)
-  (let ((args (list "log" "-T" "{date|rfc822date}" "-r" commit-id)))
-    (with-temp-buffer
-      (unless (zerop (git-messenger2--execute-command 'hg args t))
-        (error "Failed 'hg log'"))
-      (goto-char (point-min))
-      (buffer-substring-no-properties
-       (line-beginning-position) (line-end-position)))))
-
 (defun git-messenger2--format-detail (vcs commit-id author message)
   (cl-case vcs
     (git (let ((date (git-messenger2--commit-date commit-id)))
            (format "commit : %s \nAuthor : %s\nDate   : %s \n%s"
-                   (substring commit-id 0 8) author date message)))
-    (hg (let ((date (git-messenger2--hg-commit-date commit-id)))
-          (format "commit : %s \nAuthor : %s\nDate   : %s \n%s"
-                  commit-id author date message)))))
+                   (substring commit-id 0 8) author date message)))))
 
 (defun git-messenger2--show-detail-p (commit-id)
   (and (or git-messenger2-show-detail current-prefix-arg)
@@ -219,37 +185,26 @@ and menus.")
     (goto-char (point-min)))
   (git-messenger2--popup-close))
 
-(defun git-messenger2--popup-hg-show ()
-  (git-messenger2--popup-common
-   'hg (list "diff" "-c" git-messenger2-last-commit-id) 'diff-mode))
-
 (defun git-messenger2--popup-diff ()
   (interactive)
   (cl-case git-messenger2-vcs
     (git (let ((args (list "--no-pager" "diff" "--no-ext-diff"
                            (concat git-messenger2-last-commit-id "^!"))))
-           (git-messenger2--popup-common 'git args 'diff-mode)))
-    (hg (git-messenger2--popup-hg-show))))
+           (git-messenger2--popup-common 'git args 'diff-mode)))))
 
 (defun git-messenger2--popup-show ()
   (interactive)
   (cl-case git-messenger2-vcs
     (git (let ((args (list "--no-pager" "show" "--no-ext-diff" "--stat"
                            git-messenger2-last-commit-id)))
-           (git-messenger2--popup-common 'git args)))
-    (hg (let ((args (list "log" "--stat" "-r"
-                          git-messenger2-last-commit-id)))
-          (git-messenger2--popup-common 'hg args)))))
+           (git-messenger2--popup-common 'git args)))))
 
 (defun git-messenger2--popup-show-verbose ()
   (interactive)
   (cl-case git-messenger2-vcs
     (git (let ((args (list "--no-pager" "show" "--no-ext-diff" "--stat" "-p"
                            git-messenger2-last-commit-id)))
-           (git-messenger2--popup-common 'git args)))
-    (hg (let ((args (list "log" "-p" "--stat" "-r"
-                          git-messenger2-last-commit-id)))
-          (git-messenger2--popup-common 'hg args)))))
+           (git-messenger2--popup-common 'git args)))))
 
 (defvar git-messenger2-map
   (let ((map (make-sparse-keymap)))
