@@ -145,7 +145,7 @@ and menus.")
   (git-messenger2--popup-close))
 
 (defun git-messenger2--popup-common (args &optional mode)
-  (with-current-buffer (get-buffer-create "*git-messenger*")
+  (with-current-buffer (get-buffer-create "*git-messenger2*")
     (view-mode -1)
     (fundamental-mode)
     (erase-buffer)
@@ -227,6 +227,21 @@ and menus.")
                   git-messenger2-last-message (git-messenger2--commit-message parent)))))
       (throw 'git-messenger2-loop nil))))
 
+(defun git-messenger2--strip-pgp-signature (msg)
+  (with-temp-buffer
+    (insert msg)
+    (goto-char (point-min))
+    (when (search-forward "-----BEGIN PGP SIGNATURE-----" nil t)
+      (let ((start (line-beginning-position)))
+        (when (search-forward "-----END PGP SIGNATURE-----" nil t)
+          (delete-region start (point)))
+        (buffer-substring-no-properties (point-min) (point-max))))))
+
+(defun git-messenger2--filter-popup-message (msg)
+  (let ((filter-funcs '(git-messenger2--strip-pgp-signature)))
+    (dolist (func filter-funcs msg)
+      (setq msg (funcall func msg)))))
+
 ;;;###autoload
 (defun git-messenger2-popup-message ()
   (interactive)
@@ -239,6 +254,7 @@ and menus.")
          (popuped-message (if (git-messenger2--show-detail-p commit-id)
                               (git-messenger2--format-detail commit-id author msg)
                             msg)))
+    (setq popuped-message (git-messenger2--filter-popup-message popuped-message))
     (setq git-messenger2-last-message popuped-message
           git-messenger2-last-commit-id commit-id)
     (let (finish)

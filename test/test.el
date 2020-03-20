@@ -22,20 +22,14 @@
 (require 'ert)
 (require 'git-messenger2)
 
-(ert-deftest find-vcs ()
-  ""
-  (let* ((tmp-dir (file-name-as-directory
-                   (concat default-directory (make-temp-name "git-messenger2"))))
-         (git-dir (concat tmp-dir ".git"))
-         (hg-dir (concat tmp-dir "foo/" ".hg"))
-         (test-dir (concat tmp-dir "foo/bar/")))
-    (unwind-protect
-        (progn
-          (make-directory git-dir t)
-          (make-directory hg-dir t)
-          (make-directory test-dir t)
-          (let ((default-directory test-dir))
-            (should (eq (git-messenger2--find-vcs) 'hg))))
-      (delete-directory tmp-dir t))))
+(ert-deftest filter-pgp-signature ()
+  "Strip PGP signature from in"
+  (let* ((msg "hello
+-----BEGIN PGP SIGNATURE-----
+-----END PGP SIGNATURE-----
+world")
+         (filtered (git-messenger2--strip-pgp-signature msg)))
+    (should (not (string-match-p "-----BEGIN PGP SIGNATURE-----" filtered)))
+    (should (not (string-match-p "-----END PGP SIGNATURE-----" filtered)))))
 
 ;;; test.el ends here
