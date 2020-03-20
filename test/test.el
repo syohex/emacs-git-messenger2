@@ -35,7 +35,7 @@
           (make-directory hg-dir t)
           (make-directory test-dir t)
           (let ((default-directory test-dir))
-            (should (eq (git-messenger2:find-vcs) 'hg))))
+            (should (eq (git-messenger2--find-vcs) 'hg))))
       (delete-directory tmp-dir t))))
 
 ;;; test.el ends here
