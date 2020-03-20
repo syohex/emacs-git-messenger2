@@ -1,4 +1,4 @@
-# git-messenger.el
+# git-messenger.el ![](https://github.com/syohex/emacs-git-messenger2/workflows/CI/badge.svg)
 
 `git-messenger2.el` is Emacs port of [git-messenger.vim](https://github.com/rhysd/git-messenger.vim).
 
