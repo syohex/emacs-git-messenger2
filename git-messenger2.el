@@ -130,20 +130,6 @@ and menus.")
   (interactive)
   (throw 'git-messenger2-loop t))
 
-(defun git-messenger2--copy-message ()
-  "Copy current displayed commit message to kill-ring."
-  (interactive)
-  (when git-messenger2-last-message
-    (kill-new git-messenger2-last-message))
-  (git-messenger2--popup-close))
-
-(defun git-messenger2--copy-commit-id ()
-  "Copy current displayed commit id to kill-ring."
-  (interactive)
-  (when git-messenger2-last-commit-id
-    (kill-new git-messenger2-last-commit-id))
-  (git-messenger2--popup-close))
-
 (defun git-messenger2--popup-common (args &optional mode)
   (with-current-buffer (get-buffer-create "*git-messenger2*")
     (view-mode -1)
@@ -196,7 +182,7 @@ and menus.")
       (unless (zerop (git-messenger2--execute-git args t))
         (error "Failed to execute git show --oneline"))
       (goto-char (point-min))
-      (let ((case-fold-search nil))
+      (let ((case-fold-search t))
         (when (re-search-forward "Merge\\s-+\\(?:pull\\s-+request\\|pr\\)\\s-+#\\([0-9]+\\)")
           (string-to-number (match-string-no-properties 1)))))))
 
@@ -232,13 +218,10 @@ and menus.")
   (let ((map (make-sparse-keymap)))
     ;; key bindings
     (define-key map (kbd "q") #'git-messenger2--popup-close)
-    (define-key map (kbd "c") #'git-messenger2--copy-commit-id)
     (define-key map (kbd "d") #'git-messenger2--popup-diff)
     (define-key map (kbd "s") #'git-messenger2--popup-show)
     (define-key map (kbd "S") #'git-messenger2--popup-show-verbose)
-    (define-key map (kbd "M-w") #'git-messenger2--copy-message)
-    (define-key map (kbd ",") #'git-messenger2--show-parent)
-    (define-key map (kbd "g") #'git-messenger2--goto-pr-page)
+    (define-key map (kbd "p") #'git-messenger2--goto-pr-page)
     map)
   "Key mappings of git-messenger. This is enabled when commit message is popup-ed.")
 
@@ -246,12 +229,9 @@ and menus.")
   '((git-messenger2--popup-show . "Show")
     (git-messenger2--popup-show-verbose . "Show verbose")
     (git-messenger2--popup-close . "Close")
-    (git-messenger2--copy-commit-id . "Copy hash")
     (git-messenger2--popup-diff . "Diff")
-    (git-messenger2--copy-message . "Copy message")
-    (git-messenger2--show-parent . "Go Parent")
     (git-messenger2--popup-close . "Quit")
-    (git-messenger2--goto-pr-page . "Jump PR page")))
+    (git-messenger2--goto-pr-page . "Pull Request page")))
 
 (defsubst git-messenger2-function-to-key (func)
   (key-description (car-safe (where-is-internal func git-messenger2-map))))
@@ -264,21 +244,6 @@ and menus.")
                  (unless(memq func '(git-messenger2--popup-show-verbose git-messenger2--popup-diff))
                    (format "[%s]%s " key desc))))
              git-messenger2-func-prompt ""))
-
-(defun git-messenger2--show-parent ()
-  (interactive)
-  (let ((file (buffer-file-name (buffer-base-buffer))))
-    (with-temp-buffer
-      (unless (zerop (process-file "git" nil t nil
-                                   "blame" "--increment" git-messenger2-last-commit-id "--" file))
-        (error "No parent commit ID"))
-      (goto-char (point-min))
-      (when (re-search-forward (concat "^" git-messenger2-last-commit-id) nil t)
-        (when (re-search-forward "previous \\(\\S-+\\)" nil t)
-          (let ((parent (match-string-no-properties 1)))
-            (setq git-messenger2-last-commit-id parent
-                  git-messenger2-last-message (git-messenger2--commit-message parent)))))
-      (throw 'git-messenger2-loop nil))))
 
 (defun git-messenger2--strip-pgp-signature (msg)
   (with-temp-buffer
