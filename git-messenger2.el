@@ -28,7 +28,7 @@
 ;;
 ;; Example usage:
 ;;   (require 'git-messenger2)
-;;   (global-set-key (kbd "C-x v p") 'git-messenger2-popup-message)
+;;   (global-set-key (kbd "C-x v p") #'git-messenger2-popup-message)
 ;;
 
 ;;; Code:
@@ -94,12 +94,12 @@ and menus.")
       (goto-char (point-min))
       (git-messenger2--git-commit-info-at-line))))
 
-(defsubst git-messenger2--not-committed-id-p (commit-id)
-  (or (string-match-p "\\`\\(?:0+\\|-\\)\\'" commit-id)))
+(defun git-messenger2--valid-commit-id-p (commit-id)
+  (not (string-match-p "\\`\\(?:0+\\|-\\)\\'" commit-id)))
 
 (defun git-messenger2--commit-message (commit-id)
   (with-temp-buffer
-    (if (git-messenger2--not-committed-id-p commit-id)
+    (if (not (git-messenger2--valid-commit-id-p commit-id))
         "* not yet committed *"
       (let ((args (list "--no-pager" "cat-file" "commit" commit-id)))
         (unless (zerop (git-messenger2--execute-git args t))
@@ -124,7 +124,7 @@ and menus.")
 
 (defun git-messenger2--show-detail-p (commit-id)
   (and (or git-messenger2-show-detail current-prefix-arg)
-       (not (git-messenger2--not-committed-id-p commit-id))))
+       (git-messenger2--valid-commit-id-p commit-id)))
 
 (defun git-messenger2--popup-close ()
   (interactive)
@@ -177,6 +177,57 @@ and menus.")
                     git-messenger2-last-commit-id)))
     (git-messenger2--popup-common args)))
 
+(defun git-messenger2--first-parent (file line)
+  (let ((args (list "--no-pager" "blame" "-w" "-L" (format "%d,+1" line)
+                    "--first-parent" (file-name-nondirectory file))))
+    (with-temp-buffer
+      (unless (zerop (git-messenger2--execute-git args t))
+        (error "Failed to execute git blame --first-parent"))
+      (goto-char (point-min))
+      (let* ((line (buffer-substring-no-properties (point) (line-end-position)))
+             (parent-id (cl-first (split-string line))))
+        (unless (git-messenger2--valid-commit-id-p parent-id)
+          (error "This line is not committed yet"))
+        parent-id))))
+
+(defun git-messenger2--find-pr-number (commit-id)
+  (let ((args (list "--no-pager" "show" "--oneline" commit-id)))
+    (with-temp-buffer
+      (unless (zerop (git-messenger2--execute-git args t))
+        (error "Failed to execute git show --oneline"))
+      (goto-char (point-min))
+      (let ((case-fold-search nil))
+        (when (re-search-forward "Merge\\s-+\\(?:pull\\s-+request\\|pr\\)\\s-+#\\([0-9]+\\)")
+          (string-to-number (match-string-no-properties 1)))))))
+
+(defun git-messenger2--convert-git-url-to-https (url)
+  (replace-regexp-in-string
+   "\\.git\\'" ""
+   (replace-regexp-in-string
+    "github\\.com:" "github.com/"
+    (replace-regexp-in-string "\\`git@" "https://" url))))
+
+(defun git-messenger2--github-url ()
+  (with-temp-buffer
+    (unless (zerop (git-messenger2--execute-git (list "remote" "get-url" "origin") t))
+      (error "Failed to get origin url"))
+    (goto-char (point-min))
+    (let ((url (buffer-substring-no-properties (point) (line-end-position))))
+      (if (not (string-match-p "\\`git@" url))
+          url
+        (git-messenger2--convert-git-url-to-https url)))))
+
+;; inspired from https://gist.github.com/kazuho/eab551e5527cb465847d6b0796d64a39
+(defun git-messenger2--goto-pr-page ()
+  (interactive)
+  (let* ((file (buffer-file-name (buffer-base-buffer)))
+         (line (line-number-at-pos))
+         (parent-id (git-messenger2--first-parent file line))
+         (pr-number (git-messenger2--find-pr-number parent-id))
+         (base-url (git-messenger2--github-url))
+         (pr-page-url (format "%s/pull/%d" base-url pr-number)))
+    (browse-url pr-page-url)))
+
 (defvar git-messenger2-map
   (let ((map (make-sparse-keymap)))
     ;; key bindings
@@ -187,6 +238,7 @@ and menus.")
     (define-key map (kbd "S") #'git-messenger2--popup-show-verbose)
     (define-key map (kbd "M-w") #'git-messenger2--copy-message)
     (define-key map (kbd ",") #'git-messenger2--show-parent)
+    (define-key map (kbd "g") #'git-messenger2--goto-pr-page)
     map)
   "Key mappings of git-messenger. This is enabled when commit message is popup-ed.")
 
@@ -198,7 +250,8 @@ and menus.")
     (git-messenger2--popup-diff . "Diff")
     (git-messenger2--copy-message . "Copy message")
     (git-messenger2--show-parent . "Go Parent")
-    (git-messenger2--popup-close . "Quit")))
+    (git-messenger2--popup-close . "Quit")
+    (git-messenger2--goto-pr-page . "Jump PR page")))
 
 (defsubst git-messenger2-function-to-key (func)
   (key-description (car-safe (where-is-internal func git-messenger2-map))))
