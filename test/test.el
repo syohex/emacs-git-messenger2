@@ -34,6 +34,6 @@ world")
 
   (let* ((msg "hello world")
          (filtered (git-messenger2--strip-pgp-signature msg)))
-    (should (string= msg filtered))))
+    (should-not filtered)))
 
 ;;; test.el ends here

@@ -197,7 +197,7 @@ and menus.")
     (git-messenger2--copy-commit-id . "Copy hash")
     (git-messenger2--popup-diff . "Diff")
     (git-messenger2--copy-message . "Copy message")
-    (git-messenger2-show-parent . "Go Parent")
+    (git-messenger2--show-parent . "Go Parent")
     (git-messenger2--popup-close . "Quit")))
 
 (defsubst git-messenger2-function-to-key (func)
@@ -231,8 +231,7 @@ and menus.")
   (with-temp-buffer
     (insert msg)
     (goto-char (point-min))
-    (if (not (search-forward "-----BEGIN PGP SIGNATURE-----" nil t))
-        msg
+    (when (search-forward "-----BEGIN PGP SIGNATURE-----" nil t)
       (let ((start (line-beginning-position)))
         (when (search-forward "-----END PGP SIGNATURE-----" nil t)
           (delete-region start (point)))
@@ -241,7 +240,7 @@ and menus.")
 (defun git-messenger2--filter-popup-message (msg)
   (let ((filter-funcs '(git-messenger2--strip-pgp-signature)))
     (dolist (func filter-funcs msg)
-      (setq msg (funcall func msg)))))
+      (setq msg (or (funcall func msg) msg)))))
 
 ;;;###autoload
 (defun git-messenger2-popup-message ()
