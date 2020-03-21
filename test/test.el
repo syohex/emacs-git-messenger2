@@ -36,4 +36,10 @@ world")
          (filtered (git-messenger2--strip-pgp-signature msg)))
     (should-not filtered)))
 
+(ert-deftest convert-github-url ()
+  "Convert git protocol URL to https URL for github"
+  (let* ((input "git@github.com:syohex/emacs-git-messenger2.git")
+         (output (git-messenger2--convert-git-url-to-https input)))
+    (should (string= output "https://github.com/syohex/emacs-git-messenger2"))))
+
 ;;; test.el ends here
