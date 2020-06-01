@@ -5,7 +5,7 @@
 ;; Author: Shohei YOSHIDA <syohex@gmail.com>
 ;; URL: https://github.com/syohex/emacs-git-messenger2
 ;; Version: 0.18
-;; Package-Requires: ((emacs "26.1") (popup "0.5.0"))
+;; Package-Requires: ((emacs "26.3") (popup "0.5.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
